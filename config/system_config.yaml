@@ -1,0 +1,81 @@
+model:
+  weights: data/runs/train/pcb_obb_crop/weights/best.pt
+  imgsz: 1920
+  conf: 0.6
+  conf_marker: 0.3
+  iou: 0.7
+  device: ''
+camera:
+  source: 0
+  width: 1280
+  height: 720
+  fps: 30
+roi:
+  enabled: true
+  polygon:
+  - - 388
+    - 13
+  - - 885
+    - 14
+  - - 885
+    - 665
+  - - 385
+    - 668
+undistort:
+  enabled: false
+  camera_matrix:
+  - - 1000.0
+    - 0.0
+    - 640.0
+  - - 0.0
+    - 1000.0
+    - 360.0
+  - - 0.0
+    - 0.0
+    - 1.0
+  dist_coeffs:
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+  - 0.0
+coordinate:
+  homography:
+  - - 1.0
+    - 0.0
+    - 0.0
+  - - 0.0
+    - 1.0
+    - 0.0
+  - - 0.0
+    - 0.0
+    - 1.0
+  pixels_per_mm: 4.0563
+  y_fixed_mm: 0.0
+trigger_line:
+  y_px: 360
+  direction: down
+  min_conf: 0.6
+orientation:
+  enabled: true
+  pcb_classes:
+  - TQFP
+  - QFP
+  marker_map:
+    marker_TQFP: TQFP
+    marker_QFP: QFP
+  cross_check: false
+  offset_deg: 0.0
+  symmetry_deg: 180
+  symmetry_by_class:
+    TQFP: 180
+    QFP: 90
+tracker:
+  max_match_dist_px: 80
+  max_missing_frames: 15
+comms:
+  enabled: true
+  protocol: tcp
+  host: 127.0.0.1
+  port: 5000
+  reconnect_seconds: 2.0

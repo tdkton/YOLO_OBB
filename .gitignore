@@ -1,0 +1,39 @@
+# Virtual environments
+.venv/
+.venv_win/
+.venv_cuda/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# YOLO model weights (large files)
+*.pt
+*.onnx
+*.engine
+
+# Dataset images & labels (too large for git)
+data/Native/
+data/Native_Crop/
+data/data1/
+data/Test_orient_locate/
+data/runs/
+
+# YOLO cache files
+*.cache
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+train_log.txt

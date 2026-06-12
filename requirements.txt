@@ -1,0 +1,13 @@
+# Core
+ultralytics>=8.3.0      # YOLO26 / YOLO-OBB support
+opencv-python>=4.9.0
+numpy>=1.26
+PyYAML>=6.0
+
+# Torch is installed by setup_wsl.sh (CUDA or CPU build chosen automatically).
+# torch
+# torchvision
+
+# Optional export backends:
+#   TensorRT  -> installed with the NVIDIA stack on the host
+#   OpenVINO  -> pip install openvino

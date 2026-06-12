@@ -1,0 +1,268 @@
+% =============================================================================
+%  Nguyen ly toan hoc - Xac dinh goc xoay 0-360 do cua PCB (TQFP / QFP)
+%
+%  Bien dich (chon 1):
+%    pdflatex nguyen_ly_toan_hoc_goc.tex      (can goi vntex cho tieng Viet)
+%    xelatex  nguyen_ly_toan_hoc_goc.tex      (khuyen nghi: tu dong font Unicode)
+%
+%  Neu dung XeLaTeX, doi phan preamble sang khoi "XeLaTeX" o duoi.
+% =============================================================================
+\documentclass[12pt,a4paper]{article}
+
+% ---- Preamble cho pdfLaTeX (mac dinh) --------------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+
+% ---- Neu dung XeLaTeX thi thay 3 dong tren bang khoi nay -------------------
+% \usepackage{fontspec}
+% \usepackage{polyglossia}
+% \setdefaultlanguage{vietnamese}
+% \setmainfont{Latin Modern Roman}
+% ----------------------------------------------------------------------------
+
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{geometry}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
+\geometry{margin=2.5cm}
+
+\newcommand{\atantwo}{\operatorname{atan2}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+\title{Nguyên lý toán học\\[2pt]\large Xác định góc xoay $0$--$360^\circ$ của PCB (TQFP / QFP)}
+\author{Hệ thống phân loại PCB --- YOLO26-OBB}
+\date{}
+
+\begin{document}
+\maketitle
+
+Tài liệu giải thích \textbf{bản chất toán học} của khối tính góc trong
+\code{src/orientation.py}: vì sao OBB chỉ cho góc tới một giới hạn đối xứng, và làm sao
+dùng \textbf{mốc trắng (marker)} để khôi phục góc duy nhất trong $[0^\circ, 360^\circ)$
+cho từng loại --- \textbf{TQFP (chữ nhật)} và \textbf{QFP (vuông)}.
+
+\bigskip
+\noindent\textit{Quy ước ký hiệu:} $\theta$ góc OBB; $\phi$ góc từ tâm board tới marker;
+$\delta$ độ lệch hiệu chỉnh (\code{offset\_deg}); $S$ chu kỳ đối xứng xoay của vật.
+
+\tableofcontents
+\bigskip
+
+% =============================================================================
+\section{Biểu diễn OBB và góc thô từ model}
+
+Mỗi vật được model trả về dưới dạng \textbf{hộp giới hạn có hướng} (Oriented Bounding Box):
+\[
+\text{OBB} = (c_x,\; c_y,\; w,\; h,\; \theta),
+\]
+trong đó $(c_x,c_y)$ là tâm hộp (pixel), $w,h$ là chiều rộng và cao, $\theta$ là góc nghiêng
+(radian). Ultralytics tính $\theta$ qua hàm chặn sigmoid $\sigma$:
+\[
+\theta = \bigl(\sigma(z) - 0.25\bigr)\,\pi
+\quad\Longrightarrow\quad
+\theta \in \Bigl[-\tfrac{\pi}{4},\; \tfrac{3\pi}{4}\Bigr) = [-45^\circ,\; 135^\circ).
+\]
+Đây là một \textbf{cửa sổ rộng đúng $180^\circ$}.
+
+% =============================================================================
+\section{Vì sao góc bị nhập nhằng: tính đối xứng xoay}
+
+Gọi $R_\alpha$ là phép quay quanh tâm vật một góc $\alpha$. Vật \textbf{đối xứng xoay chu kỳ
+$S$} nếu quay đúng $S$ độ thì hình ảnh trùng khít chính nó:
+\[
+R_S(\text{vật}) \equiv \text{vật}.
+\]
+Khi đó camera \textbf{không thể phân biệt} một vật ở hướng $\beta$ với cùng vật ở hướng
+$\beta + kS$ ($k \in \mathbb{Z}$). Tập các hướng ``nhìn giống hệt nhau'' là một
+\textbf{lớp tương đương}:
+\[
+[\beta] = \{\, \beta + kS \;:\; k \in \mathbb{Z} \,\}
+\qquad (\text{các góc đồng dư theo modulo } S).
+\]
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}lllll@{}}
+\toprule
+Loại & Hình & Quan hệ $w,h$ & Chu kỳ $S$ & Số hướng không phân biệt \\
+\midrule
+\textbf{TQFP} & chữ nhật & $w \neq h$    & $180^\circ$ & $360/180 = 2$ \\
+\textbf{QFP}  & vuông    & $w \approx h$ & $90^\circ$  & $360/90 = 4$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent\textbf{Giải thích.}
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Chữ nhật:} quay $180^\circ$ thì trùng (cạnh dài vẫn là cạnh dài), nhưng quay
+        $90^\circ$ thì \emph{không} trùng (dài $\leftrightarrow$ ngắn hoán đổi). Vậy
+        $S=180^\circ$. Model \emph{biết} đâu là cạnh dài (vì $w \neq h$), chỉ \emph{không
+        biết đầu hay đuôi} $\Rightarrow$ còn $2$ khả năng.
+  \item \textbf{Vuông:} quay $90^\circ$ đã trùng (4 cạnh như nhau). Vậy $S=90^\circ$. Khi
+        $w \approx h$, khái niệm ``cạnh dài'' biến mất $\Rightarrow$ góc chỉ xác định tới
+        $90^\circ \Rightarrow$ còn $4$ khả năng.
+\end{itemize}
+
+Như vậy \textbf{góc thật của vật} không phải một số đơn lẻ mà là một lớp:
+\[
+\theta_{\text{thật}} \in [\theta] = \{\, \theta + kS \,\}.
+\]
+OBB cho ta đại diện $\theta$ với độ chính xác \emph{cạnh} rất tốt, nhưng \textbf{không chọn
+được phần tử nào} trong lớp. Đó là chỗ marker vào cuộc.
+
+% =============================================================================
+\section{Marker --- vector phá đối xứng}
+
+Mốc trắng là đặc trưng \textbf{bất đối xứng} gắn cố định trên board, nên hướng từ
+\emph{tâm board} tới \emph{tâm marker} là một mũi tên quay theo vật và \emph{không} có tính
+đối xứng chu kỳ $S$. Với tâm marker $(m_x, m_y)$, định nghĩa \textbf{góc tham chiếu}:
+\[
+\boxed{\;\phi = \atantwo\bigl(m_y - c_y,\; m_x - c_x\bigr)\;}
+\qquad \phi \in (-180^\circ, 180^\circ].
+\]
+$\phi$ gắn với một hướng vật lý duy nhất $\Rightarrow$ nó ``đánh dấu'' được phần tử đúng
+trong lớp $[\theta]$.
+
+\paragraph{Lưu ý hệ toạ độ ảnh.} Trục $y$ hướng \emph{xuống}, nên $\atantwo$ cho góc theo
+chiều kim đồng hồ. Điều này nhất quán cho cả $\theta$ và $\phi$ nên \textbf{không ảnh hưởng}
+kết quả chọn (vì ta chỉ so sánh hiệu góc).
+
+% =============================================================================
+\section{Sinh tập ứng viên theo chu kỳ đối xứng}
+
+Mọi phần tử trong lớp $[\theta]$ đều là nghiệm hợp lệ về hình học, ta liệt kê chúng trong
+một vòng tròn đầy đủ $360^\circ$. Với chu kỳ $S$:
+\[
+n = \frac{360^\circ}{S},
+\qquad
+\mathcal{C} = \{\, \alpha_k = \theta + kS \;:\; k = 0,1,\dots,n-1 \,\}.
+\]
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{TQFP} ($S=180^\circ$): $\;\mathcal{C} = \{\theta,\; \theta+180^\circ\}$ (2 ứng viên).
+  \item \textbf{QFP} ($S=90^\circ$): $\;\mathcal{C} = \{\theta,\; \theta+90^\circ,\; \theta+180^\circ,\; \theta+270^\circ\}$ (4 ứng viên).
+\end{itemize}
+
+% =============================================================================
+\section{Hàm khoảng cách góc (gói về $[-180^\circ,180^\circ]$)}
+
+Hiệu hai góc phải được ``gói'' về dải $(-180^\circ,180^\circ]$ để khoảng cách trên vòng
+tròn đúng (ví dụ $350^\circ$ và $10^\circ$ chỉ cách nhau $20^\circ$):
+\[
+d(\alpha,\phi) = \Bigl|\, \bigl((\alpha - \phi + 180^\circ)\bmod 360^\circ\bigr) - 180^\circ \,\Bigr|,
+\qquad d \in [0^\circ, 180^\circ].
+\]
+
+% =============================================================================
+\section{Chọn ứng viên và ra góc cuối}
+
+Chọn ứng viên gần hướng marker nhất:
+\[
+\boxed{\;heading = \arg\min_{\alpha \in \mathcal{C}} \; d(\alpha, \phi)\;}
+\]
+Cộng độ lệch hiệu chỉnh $\delta$ (đặt tư thế nào đọc là $0^\circ$) rồi gói về vòng tròn đầy đủ:
+\[
+\boxed{\;angle\_deg = (heading + \delta) \bmod 360^\circ \;\in\; [0^\circ, 360^\circ)\;}
+\]
+
+\noindent\textbf{Phân vai:}
+$\theta$ (OBB) cho \emph{độ chính xác cạnh}; $\phi$ (marker) \emph{chọn đúng phần tử} trong
+lớp đối xứng; $\delta$ đặt gốc $0^\circ$ theo quy ước cơ khí.
+
+% =============================================================================
+\section{Điều kiện chọn đúng và biên an toàn}
+
+$\arg\min$ chọn đúng phần tử $\alpha^\ast$ khi và chỉ khi $\phi$ gần $\alpha^\ast$ hơn mọi
+ứng viên khác. Vì các ứng viên cách đều $S$, \textbf{biên an toàn} là nửa khoảng cách:
+\[
+\boxed{\; d(\phi, \alpha^\ast) < \tfrac{S}{2} \;}
+\]
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{TQFP} ($S=180^\circ$): biên $=90^\circ$ --- chỉ cần marker nằm đúng nửa, rất bền.
+  \item \textbf{QFP} ($S=90^\circ$): biên $=45^\circ$ --- marker phải nằm trong góc phần tư
+        đúng; nếu $\phi$ rơi sát $45^\circ$ (đường chéo, tức \emph{góc} hình vuông) thì nằm
+        ngay ranh giới giữa 2 ứng viên $\Rightarrow$ dễ nhảy hướng.
+\end{itemize}
+
+\noindent\textbf{Hệ quả thực hành (quan trọng cho QFP vuông):} đặt/chọn marker
+\emph{dọc theo một cạnh} (để $\phi$ trùng hướng cạnh, cách ranh giới $45^\circ$) thay vì ở
+\emph{góc}. Nếu marker buộc ở góc, xoay lưới ứng viên bằng $\delta$ để $\phi$ rơi vào giữa
+một góc phần tư.
+
+\begin{verbatim}
+            theta+270
+                 |
+                 |   <-- ranh gioi (45 do toi moi ben)
+   theta+180 ----+---- theta      phi nam trong mui nao -> chon ung vien do
+                 |
+                 |
+            theta+90        (QFP: 4 mui, moi mui rong S = 90 do)
+\end{verbatim}
+
+% =============================================================================
+\section{Suy giảm mượt khi mất marker}
+
+Nếu khung đó không thấy marker (mờ/khuất), không có $\phi$ để khử nhập nhằng. Hệ thống trả
+về đại diện chuẩn của lớp, gập về $[0,S)$:
+\[
+angle\_deg = \bigl((\theta \bmod S) + \delta\bigr) \bmod 360^\circ.
+\]
+$\Rightarrow$ Không bao giờ báo \emph{sai}, chỉ tạm \emph{mất khả năng phân biệt $360^\circ$}
+ở riêng khung đó.
+
+% =============================================================================
+\section{Ví dụ số}
+
+Giả sử $\theta = 30^\circ$ (OBB), $\delta = 0$.
+
+\subsection{TQFP (chữ nhật, $S=180^\circ$) --- marker ở ``đuôi''}
+Tâm board $(100,100)$, tâm marker $(60,130)$:
+\[
+\phi = \atantwo(30, -40) \approx 143.1^\circ,
+\qquad \mathcal{C} = \{30^\circ, 210^\circ\}.
+\]
+\[
+d(30^\circ, 143.1^\circ) = 113.1^\circ, \qquad
+d(210^\circ, 143.1^\circ) = 66.9^\circ \;(\text{nhỏ nhất}).
+\]
+\[
+\Rightarrow heading = 210^\circ \;\Rightarrow\; angle\_deg = 210^\circ.
+\]
+
+\subsection{QFP (vuông, $S=90^\circ$) --- marker dọc một cạnh}
+Cùng $\theta=30^\circ$, $\phi \approx 143.1^\circ$, $\mathcal{C} = \{30^\circ,120^\circ,210^\circ,300^\circ\}$:
+\[
+d(30^\circ)=113.1^\circ,\quad
+d(120^\circ)=23.1^\circ\;(\text{nhỏ nhất},\,<45^\circ),\quad
+d(210^\circ)=66.9^\circ,\quad
+d(300^\circ)=156.9^\circ.
+\]
+\[
+\Rightarrow heading = 120^\circ \;\Rightarrow\; angle\_deg = 120^\circ.
+\]
+
+\subsection{QFP --- trường hợp xấu (marker ở góc)}
+Nếu $\phi = 75^\circ$ (gần đúng giữa $30^\circ$ và $120^\circ$):
+\[
+d(30^\circ,75^\circ) = 45^\circ, \qquad d(120^\circ,75^\circ) = 45^\circ \;(\text{HOÀ}).
+\]
+Nhiễu nhỏ là lật hướng --- đây là lý do \textbf{tránh đặt marker ở góc hình vuông}.
+
+% =============================================================================
+\section{Tóm tắt công thức}
+
+\[
+\begin{aligned}
+\phi &= \atantwo(m_y - c_y,\; m_x - c_x), \\[3pt]
+S &= \begin{cases} 180^\circ & \text{TQFP (chữ nhật)}\\ 90^\circ & \text{QFP (vuông)} \end{cases} \\[3pt]
+\mathcal{C} &= \{\, \theta + kS : k = 0,\dots, \tfrac{360}{S}-1 \,\}, \\[3pt]
+d(\alpha,\phi) &= \bigl|\, ((\alpha - \phi + 180^\circ)\bmod 360^\circ) - 180^\circ \,\bigr|, \\[3pt]
+heading &= \arg\min_{\alpha \in \mathcal{C}} d(\alpha,\phi), \\[3pt]
+angle\_deg &= (heading + \delta) \bmod 360^\circ \in [0^\circ, 360^\circ).
+\end{aligned}
+\]
+Điều kiện chọn đúng: $d(\phi, \alpha^\ast) < S/2$ \;(QFP: $90^\circ$, TQFP: $45^\circ$).
+
+\end{document}
