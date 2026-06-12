@@ -35,6 +35,13 @@ Thumbs.db
 # YOLO output at project root
 runs/
 
+# Allow trained best.pt to be tracked
+!data/runs/
+!data/runs/train/
+!data/runs/train/pcb_obb_crop/
+!data/runs/train/pcb_obb_crop/weights/
+!data/runs/train/pcb_obb_crop/weights/best.pt
+
 # Logs
 *.log
 train_log.txt
