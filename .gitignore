@@ -12,9 +12,7 @@ __pycache__/
 *.pyd
 
 # YOLO model weights (large files)
-*.pt
-*.onnx
-*.engine
+
 
 # Dataset images & labels (too large for git)
 data/Native/
@@ -33,6 +31,9 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# YOLO output at project root
+runs/
 
 # Logs
 *.log
