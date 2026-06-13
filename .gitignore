@@ -11,15 +11,11 @@ __pycache__/
 *.pyo
 *.pyd
 
-# YOLO model weights (large files)
+# Dataset & large files
+data/
 
-
-# Dataset images & labels (too large for git)
-data/Native/
-data/Native_Crop/
-data/data1/
-data/Test_orient_locate/
-data/runs/
+# Large zip archives
+*.zip
 
 # YOLO cache files
 *.cache
@@ -34,13 +30,6 @@ Thumbs.db
 
 # YOLO output at project root
 runs/
-
-# Allow trained best.pt to be tracked
-!data/runs/
-!data/runs/train/
-!data/runs/train/pcb_obb_crop/
-!data/runs/train/pcb_obb_crop/weights/
-!data/runs/train/pcb_obb_crop/weights/best.pt
 
 # Logs
 *.log
